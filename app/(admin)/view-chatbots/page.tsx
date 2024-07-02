@@ -18,9 +18,7 @@ export default async function ViewChatbotsPage() {
   if (!userId) return;
 
   // Get the chatbot for the user
-  const {
-    // data: { chatbotsByUser },
-  } = await serverClient.query<
+  const { data: chatbotsByUser } = await serverClient.query<
     GetChatbotsByUserData,
     GetChatbotsByUserDataVariables
   >({
@@ -29,6 +27,8 @@ export default async function ViewChatbotsPage() {
       clerk_user_id: userId,
     },
   });
+
+  console.log(">>> DATA: ()", chatbotsByUser, userId);
 
   // const sortedChatbotsByUser: Chatbot[] = [...chatbotsByUser ].sort(
   //   (a, b) =>

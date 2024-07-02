@@ -155,7 +155,7 @@ type Query {
       table: "chatbots"
       configuration: "postgresql_config"
     )
-  chatbotsList: [Chatbots]
+  chatbotsList(clerk_user_id: String!): [Chatbots]
     @dbquery(
       type: "postgresql"
       schema: "public"
@@ -254,6 +254,60 @@ type Query {
       schema: "public"
       query: """
       SELECT "chat_session_id", "content", "created_at", "id", "sender" FROM "messages" WHERE "chat_session_id" = $1
+      """
+      configuration: "postgresql_config"
+    )
+
+  " Custom queries "
+  chatbotsByUser(clerk_user_id: String!): [Chatbots]
+    @dbquery(
+      type: "postgresql"
+      schema: "public"
+      table: "chatbots"
+      query: """
+      WITH chatbot_data AS (
+        SELECT
+          c.id AS chatbot_id,
+          c.clerk_user_id,
+          c.name,
+          c.created_at AS chatbot_created_at,
+          cc.id AS characteristic_id,
+          cc.content AS characteristic_content,
+          cc.created_at AS characteristic_created_at,
+          cs.id AS chat_session_id,
+          cs.created_at AS chat_session_created_at,
+          cs.guest_id,
+          m.id AS message_id,
+          m.content AS message_content,
+          m.created_at AS message_created_at
+        FROM chatbots c
+        LEFT JOIN chatbot_characteristics cc ON c.id = cc.chatbot_id
+        LEFT JOIN chat_sessions cs ON c.id = cs.chatbot_id
+        LEFT JOIN messages m ON cs.id = m.chat_session_id
+        WHERE c.clerk_user_id = $clerk_user_id
+      )
+      SELECT
+        chatbot_id AS id,
+        clerk_user_id,
+        name,
+        chatbot_created_at AS created_at,
+        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
+          'id', characteristic_id,
+          'content', characteristic_content,
+          'created_at', characteristic_created_at
+        )) AS chatbot_characteristics,
+        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
+          'id', chat_session_id,
+          'created_at', chat_session_created_at,
+          'guest_id', guest_id,
+          'messages', JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
+            'id', message_id,
+            'content', message_content,
+            'created_at', message_created_at
+          )) FILTER (WHERE message_id IS NOT NULL)
+        )) AS chat_sessions
+      FROM chatbot_data
+      GROUP BY chatbot_id, clerk_user_id, name, chatbot_created_at
       """
       configuration: "postgresql_config"
     )

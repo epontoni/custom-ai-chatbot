@@ -29,6 +29,7 @@ export const GET_CHATBOT_BY_USER = gql`
   query GetChatbotsByUser($clerk_user_id: String!) {
     chatbotsByUser(clerk_user_id: $clerk_user_id) {
       id
+      clerk_user_id
       name
       created_at
       chatbot_characteristics {
