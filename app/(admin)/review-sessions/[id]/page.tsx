@@ -1,3 +1,4 @@
+import Messages from "@/components/Messages";
 import { GET_CHAT_SESSION_MESSAGES } from "@/graphql/queries";
 import serverClient from "@/lib/server/serverClient";
 import {
@@ -45,6 +46,13 @@ export default async function ReviewSession({
       </h2>
 
       <hr className="my-10" />
+
+      <Messages
+        messages={messages}
+        chatSessionId={chatSessionId}
+        chatbotName={name}
+        guestName={guestName}
+      />
     </div>
   );
 }
