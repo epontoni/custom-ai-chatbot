@@ -79,3 +79,11 @@ export interface GetChatSessionMessagesResponse {
     guests: { name: string; email: string };
   };
 }
+
+export interface MessagesByChatSessionIdResponse {
+  chat_sessions: ChatSessions;
+}
+
+export interface MessagesByChatSessionIdVariables {
+  chat_session_id: number;
+}
