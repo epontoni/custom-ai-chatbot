@@ -17,7 +17,7 @@ export default async function startNewChat(
     // 1. Create a new guest entry
     const guestResult = await client.mutate({
       mutation: INSERT_GUEST,
-      variables: { name: guestName, email: guestEmail },
+      variables: { name: guestName, email: guestEmail, created_at: new Date() },
     });
 
     const guestId = guestResult.data.insertGuests.id;
@@ -25,7 +25,11 @@ export default async function startNewChat(
     // 2. Initialize a new chat session
     const chatSessionResult = await client.mutate({
       mutation: INSERT_CHAT_SESSION,
-      variables: { chatbot_id: chatbotId, guest_id: guestId },
+      variables: {
+        chatbot_id: chatbotId,
+        guest_id: guestId,
+        created_at: new Date(),
+      },
     });
 
     const chatSessionId = chatSessionResult.data.insertChat_sessions.id;
@@ -38,6 +42,7 @@ export default async function startNewChat(
         sender: "ai",
         // TODO: Change this for the dynamic message we want to send in backend
         content: `Welcome ${guestName}!\n How can I assist you today? 😊`,
+        created_at: new Date(),
       },
     });
 

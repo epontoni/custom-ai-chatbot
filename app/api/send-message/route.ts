@@ -1,3 +1,4 @@
+import { INSERT_MESSAGE } from "@/graphql/mutations";
 import {
   GET_CHATBOT_BY_ID,
   GET_MESSAGES_BY_CHAT_SESSION_ID,
@@ -9,6 +10,7 @@ import {
 } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { ChatCompletionMessageParam } from "openai/resources/index.mjs";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -50,6 +52,68 @@ export async function POST(req: NextRequest) {
         name: message.sender === "ai" ? "system" : name,
         content: message.content,
       }));
+
+    // Combine characteristics into a system prompt
+    const systemPrompt = chatbot.chatbot_characteristics
+      .map((c) => c.content)
+      .join(" + ");
+
+    const messages: ChatCompletionMessageParam[] = [
+      {
+        role: "system",
+        name: "name",
+        content: `You are a helpful assistant talking to ${name}. If a generic question is asked which is not relevant or in the same scope o domain as the points in mentioned in the key information section, kindly inform the user theyre only allowed to search for the specified content. Use Emoji's where is possible. Here is some key information that you need to be aware of, these are elements you may be asked about: ${systemPrompt}`,
+      },
+      ...formattedPreviousMessages,
+      {
+        role: "user",
+        name: name,
+        content: content,
+      },
+    ];
+
+    // Step 3: Send the message to OpenAI's completions API
+    const openaiResponse = await openai.chat.completions.create({
+      messages: messages,
+      model: "gpt-4o",
+    });
+
+    const aiResponse = openaiResponse?.choices?.[0]?.message?.content?.trim();
+
+    if (!aiResponse) {
+      return NextResponse.json(
+        { error: "Failed to generate AI response" },
+        { status: 500 }
+      );
+    }
+
+    // Step 4: Save the user's message in the database
+    await serverClient.mutate({
+      mutation: INSERT_MESSAGE,
+      variables: {
+        chat_session_id,
+        content,
+        sender: "user",
+        created_at: new Date(),
+      },
+    });
+
+    // Step 5: Save the AI's message in the database
+    const aiMessageResult = await serverClient.mutate({
+      mutation: INSERT_MESSAGE,
+      variables: {
+        chat_session_id,
+        content: aiResponse,
+        sender: "ai",
+        created_at: new Date(),
+      },
+    });
+
+    // Step 6: Return the AI's response to the client
+    return NextResponse.json({
+      id: aiMessageResult.data.insertMessages.id,
+      content: aiResponse,
+    });
   } catch (error) {
     console.error("Error sending message:", error);
     return NextResponse.json({ error }, { status: 500 });
