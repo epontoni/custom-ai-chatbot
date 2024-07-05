@@ -33,6 +33,8 @@ export default function EditChatbot({
     awaitRefetchQueries: true,
   });
 
+  // TODO: After deleteChatbot revalidate path "/view-chatbots"
+
   const [updateChatbot] = useMutation(UPDATE_CHATBOT, {
     refetchQueries: ["GetChatbotById"],
     awaitRefetchQueries: true,
